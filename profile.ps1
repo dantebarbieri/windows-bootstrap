@@ -50,10 +50,10 @@ Invoke-Expression (& { (atuin init powershell) -join "`n" })
 Invoke-Expression (&starship init powershell)
 
 # === Editor / pager defaults (git keeps its own editor in ~/.gitconfig) ===
-# Auto-detect editor in preference order: zed (personal) -> code (work) -> nvim
+# Auto-detect editor in preference order: zed (personal) -> code (work) -> vi (git-bundled fallback)
 $env:EDITOR = if     (Get-Command zed  -ErrorAction SilentlyContinue) { 'zed --wait' }
               elseif (Get-Command code -ErrorAction SilentlyContinue) { 'code --wait' }
-              else                                                     { 'nvim' }
+              else                                                     { 'vi' }
 $env:VISUAL = $env:EDITOR
 $env:PAGER  = 'bat --paging=always --plain'
 
@@ -70,7 +70,11 @@ function ll   { eza --git --icons -l --group-directories-first @args }
 function la   { eza --git --icons -la --group-directories-first @args }
 function lt   { eza --git --icons --tree --level 2 @args }
 function ps   { procs @args }
-function cat  { bat --paging=never @args }
+function cat  {
+    # Render Markdown with glow; everything else with bat
+    $mdFile = $args | Where-Object { $_ -is [string] -and $_ -match '\.(md|mkd|mdx|markdown)$' } | Select-Object -First 1
+    if ($mdFile) { glow @args } else { bat --paging=never @args }
+}
 function du   { dust @args }
 function df   { duf @args }
 function top  { btm @args }

@@ -73,7 +73,6 @@ $wingetPackages = @(
     # Security
     'Gitleaks.Gitleaks',
     'AquaSecurity.Trivy',
-    'GnuPG.Gpg4win',
     'FiloSottile.mkcert',
 
     # Docker (skip if no Docker on work PC; harmless otherwise)
@@ -93,8 +92,6 @@ $wingetPackages = @(
     'dalance.procs',
     'muesli.duf',
 
-    # Editor
-    'Neovim.Neovim'
 )
 
 foreach ($id in $wingetPackages) {
@@ -263,5 +260,5 @@ Manual / optional follow-ups:
     https://monaspace.githubnext.com/. Then point Windows Terminal at
     `Monaspace Neon NF` (Settings -> Defaults -> Appearance -> Font face).
   - Configure your editor of choice separately (the profile already picks
-    up zed -> code -> nvim automatically based on what's on PATH).
+    up zed -> code automatically based on what's on PATH).
 '@ -ForegroundColor Green

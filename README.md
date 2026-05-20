@@ -70,8 +70,7 @@ After running, open a new shell. You should have:
 | **lazygit** | `JesseDuffield.lazygit` | Git TUI |
 | **gitleaks** | `Gitleaks.Gitleaks` | Pre-push secret scanner |
 | **trivy** | `AquaSecurity.Trivy` | Container/repo CVE + misconfig scanner |
-| **gpg (Gpg4win)** | `GnuPG.Gpg4win` | Commit signing, secret storage |
-| **mkcert** | `FiloSottile.mkcert` | Local trusted dev TLS certs |
+| **mkcert** | `FiloSottile.mkcert` | Local trusted dev TLS certs (`https://localhost`) |
 | **dive** | `wagoodman.dive` | Inspect Docker image layers |
 | **lazydocker** | `JesseDuffield.Lazydocker` | Docker compose TUI |
 | **actionlint** | `rhysd.actionlint` | Lint GitHub Actions workflows |
@@ -83,7 +82,7 @@ After running, open a new shell. You should have:
 | **dust** | `bootandy.dust` | Better `du` (disk usage) |
 | **procs** | `dalance.procs` | Better `ps` (process list) |
 | **duf** | `muesli.duf` | Better `df` (disk free) |
-| **neovim** | `Neovim.Neovim` | TUI editor (used by some tools as `$EDITOR`) |
+
 
 ### Python tools (via `uv tool install`)
 
@@ -163,8 +162,9 @@ Loaded only in interactive `pwsh` sessions (scripts skip it). Contents:
 - **fzf defaults** — uses `fd`, sensible TUI behavior, `Ctrl-/` toggles preview
 - **atuin** — `Ctrl+R` history search
 - **starship** — prompt
-- **Env vars** — `EDITOR`/`VISUAL` auto-detect (`zed --wait` → `code --wait` → `nvim`), `PAGER='bat --paging=always --plain'`
-- **Drop-in overrides** for built-in aliases (`ls`/`ps`/`cat` → eza/procs/bat) and missing Unix commands (`du`/`df`/`top` → dust/duf/btm)
+- **Env vars** — `EDITOR`/`VISUAL` auto-detect (`zed --wait` → `code --wait`), `PAGER='bat --paging=always --plain'`
+- **Drop-in overrides** for built-in aliases (`ls`/`ps`/`cat` → eza/procs/bat+glow) and missing Unix commands (`du`/`df`/`top` → dust/duf/btm)
+- **Smart `cat`** — `.md` files are rendered with `glow` (Markdown renderer); everything else uses `bat` (syntax highlighting)
 - **Convenience functions** — `lg` (lazygit), `lzd` (lazydocker), `ll`, `la`, `lt`
 
 ### `~/.gitconfig`
