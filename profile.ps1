@@ -23,9 +23,13 @@ foreach ($t in @(
 # Guarded — PSReadLine only initializes in interactive console hosts.
 if ($Host.Name -eq 'ConsoleHost' -and (Get-Module PSReadLine)) {
     Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
-    Set-PSReadLineOption -PredictionViewStyle ListView
     Set-PSReadLineOption -EditMode Windows
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
+    # Defer ListView — PSReadLine 2.4.x race: GetHistoryItems() throws
+    # NullReferenceException if ListView activates before history init completes.
+    Register-EngineEvent PowerShell.OnIdle -MaxTriggerCount 1 -Action {
+        Set-PSReadLineOption -PredictionViewStyle ListView
+    } | Out-Null
 }
 
 # === PSFzf: Ctrl+T (file picker), Alt+C (dir picker) ===
