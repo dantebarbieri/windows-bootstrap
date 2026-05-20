@@ -117,6 +117,22 @@ foreach ($id in $wingetPackages) {
 # Refresh PATH in this session so subsequent uv/dotnet/mise commands work
 $env:Path = "$([Environment]::GetEnvironmentVariable('Path','Machine'));$([Environment]::GetEnvironmentVariable('Path','User'))"
 
+# 7-Zip: winget installs it but doesn't always add to PATH
+$sevenZipDir = @("$env:ProgramFiles\7-Zip","${env:ProgramFiles(x86)}\7-Zip") |
+    Where-Object { Test-Path "$_\7z.exe" } | Select-Object -First 1
+if ($sevenZipDir -and -not (Get-Command 7z -ErrorAction SilentlyContinue)) {
+    $userPath = [Environment]::GetEnvironmentVariable('Path','User')
+    if ($userPath -notlike "*$sevenZipDir*") {
+        [Environment]::SetEnvironmentVariable('Path', "$userPath;$sevenZipDir", 'User')
+        $env:Path += ";$sevenZipDir"
+        Ok "Added $sevenZipDir to User PATH"
+    }
+} elseif (Get-Command 7z -ErrorAction SilentlyContinue) {
+    Info '7z already on PATH'
+} else {
+    Warn '7-Zip not found — install manually or re-run after winget completes'
+}
+
 # -----------------------------------------------------------------------------
 # Python tools (via uv)
 # -----------------------------------------------------------------------------
