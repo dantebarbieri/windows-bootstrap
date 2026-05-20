@@ -1,0 +1,13 @@
+# Backups created by bootstrap.ps1
+*.bak
+*.bak-*
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editor temp files
+*.swp
+*.tmp
+*~
