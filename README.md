@@ -149,6 +149,19 @@ Tools that need a different installer. Skip unless you actually use them:
 | **markdownlint** | `pnpm add -g markdownlint-cli2` | Lint Markdown |
 | **Biome** | per-project: `pnpm add -D --save-exact @biomejs/biome` | Fast JS/TS lint + format |
 
+### Deliberately excluded
+
+These tools overlap with what's already in the set. **Uninstall them** if
+previously installed to avoid confusion:
+
+| Tool | Why excluded | Use instead |
+|---|---|---|
+| **HTTPie** (`http`/`https` CLI) | `xh` is HTTPie-compatible, single Rust binary, faster startup, no Python runtime | `xh` (drop-in replacement, same syntax) |
+| **dotnet-format** | Built into the .NET SDK since v6 — just run `dotnet format` | `dotnet format` (built-in) + **CSharpier** (opinionated formatter) |
+| **csharprepl** | Duplicates `dotnet-script` which is already installed as a global tool | `dotnet-script` (C# REPL + scripting) |
+| **neovim** | Editor preference is zed (personal) / code (work); profile auto-detects | `zed --wait` or `code --wait` |
+| **GPG (Gpg4win)** | Commits are signed with SSH keys, not GPG; `pass` is Linux-only | SSH signing (`gpg.format = ssh` in gitconfig) |
+
 ---
 
 ## What's configured
