@@ -46,6 +46,7 @@ $wingetPackages = @(
     'BurntSushi.ripgrep.MSVC',   # rg
     'sharkdp.fd',
     'junegunn.fzf',
+    'ast-grep.ast-grep',         # sg — structural code search/refactor
 
     # File viewing / diffs
     'sharkdp.bat',
@@ -91,6 +92,10 @@ $wingetPackages = @(
     'bootandy.dust',
     'dalance.procs',
     'muesli.duf',
+
+    # Document conversion / archiving
+    'JohnMacFarlane.Pandoc',
+    '7zip.7zip'
 
 )
 

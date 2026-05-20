@@ -56,6 +56,7 @@ After running, open a new shell. You should have:
 | **ripgrep** | `BurntSushi.ripgrep.MSVC` | `rg` — search files for text, respects `.gitignore` |
 | **fd** | `sharkdp.fd` | Find files by name (modern `find`) |
 | **fzf** | `junegunn.fzf` | Interactive fuzzy picker |
+| **ast-grep** | `ast-grep.ast-grep` | `sg` — structural code search/refactor via AST |
 | **bat** | `sharkdp.bat` | `cat` with syntax highlighting + pager |
 | **delta** | `dandavison.delta` | Beautiful `git diff` |
 | **eza** | `eza-community.eza` | Modern `ls` with git status + icons |
@@ -82,6 +83,8 @@ After running, open a new shell. You should have:
 | **dust** | `bootandy.dust` | Better `du` (disk usage) |
 | **procs** | `dalance.procs` | Better `ps` (process list) |
 | **duf** | `muesli.duf` | Better `df` (disk free) |
+| **pandoc** | `JohnMacFarlane.Pandoc` | Universal document converter (md→docx, html→pdf, etc.) |
+| **7-Zip** | `7zip.7zip` | Archive tool (winget ensures it's on PATH) |
 
 
 ### Python tools (via `uv tool install`)
