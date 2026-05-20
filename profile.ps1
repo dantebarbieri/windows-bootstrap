@@ -28,11 +28,13 @@ if ($Host.Name -eq 'ConsoleHost' -and (Get-Module PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
 }
 
-# === PSFzf: Ctrl+T (file picker), Alt+C (dir picker), Alt+A (arg from history) ===
+# === PSFzf: Ctrl+T (file picker), Alt+C (dir picker) ===
 # Ctrl+R intentionally NOT bound here — atuin owns it (loads next).
 if ($Host.Name -eq 'ConsoleHost') {
     Import-Module PSFzf
-    Set-PsFzfOption -PSReadlineChordReverseHistory $null
+    Set-PsFzfOption -PSReadlineChordProvider       'Ctrl+t' `
+                    -PSReadlineChordSetLocation    'Alt+c'  `
+                    -PSReadlineChordReverseHistory $null
 }
 
 # === fzf defaults: use fd, sensible TUI behavior, Ctrl-/ toggles preview ===
