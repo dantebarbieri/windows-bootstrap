@@ -177,6 +177,10 @@ if (Get-Command dotnet -ErrorAction SilentlyContinue) {
 # -----------------------------------------------------------------------------
 Section 'Node + pnpm (mise)'
 if (Get-Command mise -ErrorAction SilentlyContinue) {
+    # Disable command-not-found hook — it calls PSReadLine GetHistoryItems()
+    # during profile load before history is initialized, causing NullReferenceException.
+    mise settings set not_found_auto_install false 2>&1 | Out-Null
+    Info 'Disabled mise not_found_auto_install (known PSReadLine race condition)'
     Info 'mise use -g node@lts pnpm@latest usage...'
     mise use -g node@lts pnpm@latest usage 2>&1 | Select-Object -Last 3
 } else {
