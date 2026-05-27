@@ -170,18 +170,49 @@ previously installed to avoid confusion:
 
 Loaded only in interactive `pwsh` sessions (scripts skip it). Contents:
 
-- **zoxide** activated as `cd`
+- **zoxide** activated as `cd` (with a self-healing assertion — see [Troubleshooting](#troubleshooting))
 - **mise** activated (polyglot runtime shims)
-- **Tab completions** for: mise, gh, docker, kubectl, uv, pnpm
+- **Tab completions** for: mise, gh, docker, kubectl, uv, pnpm (deferred to first idle)
 - **PSReadLine** — menu tab completion + inline list-view predictions
-- **PSFzf** — `Ctrl+T` files, `Alt+C` dirs (leaves `Ctrl+R` for atuin)
+- **PSFzf** — `Ctrl+T` files, `Alt+C` dirs (leaves `Ctrl+R` for atuin; deferred)
 - **fzf defaults** — uses `fd`, sensible TUI behavior, `Ctrl-/` toggles preview
-- **atuin** — `Ctrl+R` history search
+- **atuin** — `Ctrl+R` history search (deferred)
 - **starship** — prompt
 - **Env vars** — `EDITOR`/`VISUAL` auto-detect (`zed --wait` → `code --wait`), `PAGER='bat --paging=always --plain'`
 - **Drop-in overrides** for built-in aliases (`ls`/`ps`/`cat` → eza/procs/bat+glow) and missing Unix commands (`du`/`df`/`top` → dust/duf/btm)
 - **Smart `cat`** — `.md` files are rendered with `glow` (Markdown renderer); everything else uses `bat` (syntax highlighting)
 - **Convenience functions** — `lg` (lazygit), `lzd` (lazydocker), `ll`, `la`, `lt`
+
+#### Why the profile is fast (caching + deferral)
+
+The naive way to wire up every modern CLI in `$PROFILE` is to dot-source
+the output of each tool's `init` subcommand on every shell start. That
+spawns ~10 external processes synchronously and adds 8-15 s to startup on
+a typical Windows dev box.
+
+This profile sidesteps that:
+
+- **Cache every `tool init` output** to `%LOCALAPPDATA%\PSCompletions\*.ps1`.
+  On boot we dot-source the cache instead of re-running the tool. Cold
+  start drops from 10+ s to ~1-2 s.
+- **Auto-invalidate** when EITHER the tool's `.exe` mtime is newer than
+  the cache OR the generator scriptblock itself changed (each cache file
+  embeds a SHA-256 hash of its generator in the header). This catches
+  `winget upgrade --force` AND profile edits like adding `--cmd cd`.
+- **Validate generated content** before persisting — e.g. the zoxide cache
+  is only written if it contains `Set-Alias -Name cd`. Half-baked init
+  output never poisons the cache.
+- **Defer** completions, PSFzf, atuin, and EDITOR detection to
+  `PowerShell.OnIdle` (fires a few ms after the first prompt is drawn).
+  Each deferred step is wrapped in its own try/catch so a missing module
+  doesn't break the rest.
+
+Helpers:
+
+| Helper | What it does |
+|---|---|
+| `Measure-ProfileLoad` | Spawns a few fresh `pwsh` and reports avg startup time with/without profile. Use to spot regressions. |
+| `Rebuild-CompletionCache` | Force-regenerate every cached `*.ps1`. Useful after a big `winget upgrade -ru --force` burst. |
 
 ### `~/.gitconfig`
 
@@ -243,6 +274,92 @@ This folder is intentionally portable. Options:
 
 If you ever add a new tool you like on either PC, edit `bootstrap.ps1`
 to include it, sync, and re-run on the other side.
+
+---
+
+## Troubleshooting
+
+### Slow startup (10+ seconds)
+
+You're probably running an older copy of `profile.ps1` that doesn't cache
+`init` output. Re-run `bootstrap.ps1` — it rewrites `$PROFILE` from the
+cached version in this repo and wipes stale cache files. Then in a fresh
+shell:
+
+```powershell
+Measure-ProfileLoad   # should be ~1-2 s on top of pwsh's own ~1.3 s baseline
+```
+
+If it's still slow, run `Rebuild-CompletionCache` once to force-regenerate
+every cached tool, then re-measure. A single tool with a very large
+completion script (e.g. `uv`'s is ~700 KB) is normal; what's NOT normal is
+spawning every tool's init on every shell.
+
+### `cd <fuzzy>` returns "zoxide: no match found" even for dirs you just visited
+
+This is a **prompt-hook chain bug** — `cd` (the alias) works fine, but
+`zoxide add` is never called, so the database never learns the
+directories you visit.
+
+Zoxide records visits via a hook installed in `prompt`. The hook wraps
+whatever `prompt` already existed and calls through to it. **Starship,
+however, replaces `prompt` wholesale without chaining** — so if starship
+loads after zoxide, the zoxide hook is orphaned. Mise's hook (which DOES
+chain) is fine either way relative to itself.
+
+Correct sync load order in `profile.ps1` is therefore:
+
+```
+starship  ->  mise-activate  ->  zoxide
+```
+
+If you reorder these, expect the symptom above. Verify the chain in a
+fresh shell:
+
+```powershell
+$function:prompt.ToString() -match '__zoxide_hook'   # must be True
+```
+
+There's a closely related trap: **`starship init powershell` only emits
+a shim** that re-spawns starship at runtime to fetch the real init. If
+you cache that shim, every shell start still spawns `starship.exe` AND
+the shim's `Invoke-Expression` replaces `prompt` *again* after zoxide
+already wrapped it — silently breaking the chain a second time. Use
+`starship init powershell --print-full-init` for the cache (the profile
+in this repo already does).
+
+### `cd` doesn't behave like zoxide (`cd <fuzzy>` fails)
+
+This means zoxide's `cd` alias was never installed. Diagnose in order:
+
+```powershell
+Get-Alias cd          # Definition should be __zoxide_z, not Set-Location
+Get-Command zoxide    # confirm zoxide is on PATH
+Get-Item (Join-Path $env:LOCALAPPDATA 'PSCompletions\zoxide.ps1') |
+    Select-Object FullName, Length, LastWriteTime
+```
+
+The current `profile.ps1` warns at every shell start if the alias check
+fails, so you don't have to guess. Common causes:
+
+| Cause | Fix |
+|---|---|
+| Stale cache from a first launch where zoxide wasn't on PATH yet (cache file is empty / missing the `Set-Alias` line). | `Rebuild-CompletionCache` — or just re-run `bootstrap.ps1`, which wipes the cache as part of redeploy. |
+| `zoxide` genuinely not installed. | `winget install ajeetdsouza.zoxide`, open new shell. |
+| Old `profile.ps1` deployed (pre-caching). | Re-run `bootstrap.ps1` from this repo. |
+| You're in **Windows PowerShell 5.1** (`powershell.exe`), not pwsh 7. The profile lives at `Documents\PowerShell\…`, not `Documents\WindowsPowerShell\…`. | Launch `pwsh`, or set Windows Terminal's default profile to PowerShell 7. |
+
+The cache is at `%LOCALAPPDATA%\PSCompletions\zoxide.ps1`. You can inspect
+it directly — the header comment tells you the schema version, generator
+hash, and source `.exe` path that produced it.
+
+### Profile change didn't take effect
+
+The cache invalidates on (1) `.exe` mtime change, (2) generator-scriptblock
+hash change, or (3) schema version bump (`$__CompletionCacheSchema` at the
+top of `profile.ps1`). If you edited a `Generator` in a way that doesn't
+change the scriptblock text, bump the schema constant — that invalidates
+everything cluster-wide.
 
 ---
 

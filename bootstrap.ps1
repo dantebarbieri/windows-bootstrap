@@ -201,17 +201,49 @@ if (-not (Get-Module -ListAvailable -Name PSFzf)) {
 # -----------------------------------------------------------------------------
 # Write $PROFILE
 # -----------------------------------------------------------------------------
-Section "Write $PROFILE"
+# Resolve the pwsh 7 profile path explicitly. Two reasons:
+#   * If this script is launched from Windows PowerShell 5.1, $PROFILE points
+#     at Documents\WindowsPowerShell\... — the wrong shell entirely.
+#   * [Environment]::GetFolderPath('MyDocuments') honors OneDrive-redirected
+#     Documents folders; $HOME\Documents does not.
+$documents      = [Environment]::GetFolderPath('MyDocuments')
+$pwshProfile    = Join-Path $documents 'PowerShell\Microsoft.PowerShell_profile.ps1'
+$pwshProfileDir = Split-Path $pwshProfile
+
+Section "Write $pwshProfile"
 $profileContent = Get-Content -Raw (Join-Path $PSScriptRoot 'profile.ps1')
-if (Test-Path $PROFILE) {
-    $bak = "$PROFILE.bak-$(Get-Date -Format yyyyMMdd-HHmmss)"
-    Copy-Item $PROFILE $bak -Force
+if (Test-Path $pwshProfile) {
+    $bak = "$pwshProfile.bak-$(Get-Date -Format yyyyMMdd-HHmmss)"
+    Copy-Item $pwshProfile $bak -Force
     Info "Backed up existing profile to $bak"
 }
-$profileDir = Split-Path $PROFILE
-if (-not (Test-Path $profileDir)) { New-Item -ItemType Directory $profileDir -Force | Out-Null }
-Set-Content -Path $PROFILE -Value $profileContent -Encoding utf8
-Ok "Wrote $PROFILE"
+if (-not (Test-Path $pwshProfileDir)) { New-Item -ItemType Directory $pwshProfileDir -Force | Out-Null }
+Set-Content -Path $pwshProfile -Value $profileContent -Encoding utf8
+Ok "Wrote $pwshProfile"
+
+# -----------------------------------------------------------------------------
+# Invalidate the completion cache so the new profile regenerates fresh.
+#
+# Stale cache is the #1 cause of "I redeployed the profile but `cd` still
+# doesn't use zoxide" — e.g. the previous cache was generated when zoxide
+# wasn't on PATH yet (so the cached zoxide.ps1 is empty), and exe-mtime
+# invalidation alone won't rescue it. Delete only the files this repo owns.
+# -----------------------------------------------------------------------------
+Section 'Invalidate completion cache'
+$cacheDir = Join-Path $env:LOCALAPPDATA 'PSCompletions'
+$cacheItems = @(
+    'zoxide','mise-activate','starship','mise-completion','rustup',
+    'gh','docker','kubectl','uv','pnpm','atuin'
+)
+if (Test-Path $cacheDir) {
+    foreach ($n in $cacheItems) {
+        $f = Join-Path $cacheDir "$n.ps1"
+        if (Test-Path $f) { Remove-Item -LiteralPath $f -Force; Info "removed $n.ps1" }
+    }
+    Ok "Cache will regenerate on next pwsh launch"
+} else {
+    Info "No cache directory yet; profile will create it on first launch"
+}
 
 # -----------------------------------------------------------------------------
 # Git config — delta + best practices
@@ -267,11 +299,20 @@ Write-Host @'
 
 Next steps:
   1. CLOSE all PowerShell / Windows Terminal windows.
-  2. Open a fresh one.
+  2. Open a fresh pwsh window.
   3. Verify:
        starship --version
        mise ls
        git config --global core.pager
+  4. Verify zoxide is overriding cd (the #1 thing that regresses on redeploy):
+       Get-Alias cd      # Definition should be __zoxide_z
+       cd ~              # should still work
+  5. Measure your new startup time:
+       Measure-ProfileLoad     # built-in helper from profile.ps1
+
+If `cd` is NOT aliased to __zoxide_z after step 4, the profile prints a
+Write-Warning at every shell start with the cache path and zoxide.exe path.
+Force-rebuild with:  Rebuild-CompletionCache
 
 Manual / optional follow-ups:
   - **Uninstall nvm-windows if present** (mise replaces it):
